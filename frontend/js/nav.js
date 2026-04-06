@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (text === 'Conflicts') {
             link.href = 'conflicts.html';
         } else if (text === 'Settings') {
-            link.href = 'home.html';
+            link.href = 'settings.html';
         }
     });
 });
