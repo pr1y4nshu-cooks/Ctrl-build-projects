@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 
+from app.schemas.issue_schema import IssueSchema
 from app.utils.issue_storage import IssueStorage
 
 router = APIRouter()
@@ -42,21 +43,20 @@ async def get_issue(issue_id: str) -> Dict[str, Any]:
 
 @router.post("/")
 async def create_issue(payload: Dict[str, Any]) -> Dict[str, Any]:
-    title = str(payload.get("title", "")).strip()
-    description = str(payload.get("description", "")).strip()
-
-    if not title or not description:
-        raise HTTPException(status_code=400, detail="title and description are required")
+    try:
+        validated_data = IssueSchema.validate_create(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     now = datetime.utcnow().isoformat()
     issue = {
         "id": str(uuid4()),
-        "title": title,
-        "description": description,
-        "repository": payload.get("repository", "unknown"),
-        "priority": str(payload.get("priority", "medium")).lower(),
-        "status": str(payload.get("status", "open")).lower(),
-        "labels": payload.get("labels", []),
+        "title": validated_data["title"],
+        "description": validated_data["description"],
+        "repository": validated_data["repository"],
+        "priority": validated_data["priority"],
+        "status": validated_data["status"],
+        "labels": validated_data["labels"],
         "created_at": now,
         "updated_at": now,
     }
@@ -75,10 +75,13 @@ async def update_issue(issue_id: str, payload: Dict[str, Any]) -> Dict[str, Any]
     if not existing_issue:
         raise HTTPException(status_code=404, detail="Issue not found")
 
+    try:
+        validated_updates = IssueSchema.validate_update(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     updated_issue = dict(existing_issue)
-    for key in ["title", "description", "repository", "priority", "status", "labels"]:
-        if key in payload:
-            updated_issue[key] = payload[key]
+    updated_issue.update(validated_updates)
 
     updated_issue["updated_at"] = datetime.utcnow().isoformat()
 
