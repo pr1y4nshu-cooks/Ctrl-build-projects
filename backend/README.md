@@ -116,6 +116,44 @@ backend/
 - Firebase Admin SDK (authentication)
 - httpx (GitHub API client)
 - sentence-transformers (fallback embeddings)
+- Typer (CLI)
+
+## CLI Usage
+
+The CLI lets you post issues to the backend from the command line.
+
+### Quick Examples
+
+```bash
+# Post an issue directly
+python -m cli.post_issue post --title "Login broken" --description "Users cannot login"
+
+# Analyze before posting (shows AI triage, asks for confirmation)
+python -m cli.post_issue post --title "App crash" --description "Crashes on start" --analyze
+
+# Interactive mode (prompts for all fields)
+python -m cli.post_issue post --interactive
+
+# Post from a markdown file (first line = title, rest = description)
+python -m cli.post_issue post --file bug-report.md
+
+# Check server status and queue
+python -m cli.post_issue status
+
+# Retry failed posts (offline queue)
+python -m cli.post_issue flush-queue
+```
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OI_SERVER_URL` | Backend server URL | `http://localhost:8000` |
+| `OI_API_TOKEN` | API token for auth | (none) |
+
+### Offline Queue
+
+If the server is unreachable, issues are saved to `data/pending_issues.json`. Use `flush-queue` to retry when the server is back online.
 
 ## Key Design Decisions
 
