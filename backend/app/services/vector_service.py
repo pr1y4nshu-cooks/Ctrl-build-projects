@@ -74,6 +74,40 @@ class VectorService:
             encoding="utf-8",
         )
 
+    def _validate_sync(self) -> bool:
+        """Check if index vector count matches issue_ids list."""
+        if self.index and self.index.ntotal != len(self.issue_ids):
+            print(
+                f"Warning: Sync mismatch - {self.index.ntotal} vectors vs {len(self.issue_ids)} IDs"
+            )
+            return False
+        return True
+
+    def _heal_sync(self) -> None:
+        """Trim to smallest size to recover from mismatch."""
+        if not self.index or self.index.ntotal == len(self.issue_ids):
+            return
+
+        min_size = min(self.index.ntotal, len(self.issue_ids))
+        self.issue_ids = self.issue_ids[:min_size]
+
+        if isinstance(self.index, _InMemoryIndex):
+            self.index.vectors = self.index.vectors[:min_size]
+            return
+
+        if faiss is not None and hasattr(self.index, "reconstruct_n"):
+            try:
+                if min_size == 0:
+                    self.index = faiss.IndexFlatIP(self.embedding_dim)
+                    return
+
+                vectors = self.index.reconstruct_n(0, min_size)
+                rebuilt_index = faiss.IndexFlatIP(self.embedding_dim)
+                rebuilt_index.add(vectors.astype(np.float32))
+                self.index = rebuilt_index
+            except Exception:
+                pass
+
     def load_or_create_index(self) -> bool:
         if self.index_path.exists() and faiss is not None:
             try:
@@ -98,6 +132,8 @@ class VectorService:
                     pass
 
         self._load_ids()
+        if not self._validate_sync():
+            self._heal_sync()
         return True
 
     def save_index(self) -> bool:
@@ -115,6 +151,9 @@ class VectorService:
             return False
 
     def add_vectors(self, embeddings: List[List[float]], issue_ids: List[str]) -> bool:
+        if not self._validate_sync():
+            self._heal_sync()
+
         if not embeddings or not issue_ids:
             return True
         if len(embeddings) != len(issue_ids):
@@ -134,6 +173,9 @@ class VectorService:
         return self.save_index()
 
     def search(self, query_embedding: List[float], k: int = 5) -> List[Tuple[str, float]]:
+        if not self._validate_sync():
+            self._heal_sync()
+
         if not self.index or not self.issue_ids:
             return []
         if len(query_embedding) != self.embedding_dim:
