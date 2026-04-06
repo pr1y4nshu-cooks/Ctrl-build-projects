@@ -58,24 +58,8 @@ class GitHubOAuth {
             this.showLoading();
             this.hideError();
 
-            // Get OAuth authorization URL from backend
-            const response = await fetch(
-                `${API_BASE_URL}/auth/github/auth/github?redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`,
-                { method: 'GET' }
-            );
-
-            if (!response.ok) {
-                throw new Error('Failed to start OAuth flow');
-            }
-
-            const data = await response.json();
-
-            // Store state for validation
-            sessionStorage.setItem('oauth_state', data.state);
-            sessionStorage.setItem('redirect_uri', GITHUB_REDIRECT_URI);
-
-            // Redirect to GitHub
-            window.location.href = data.auth_url + `&state=${data.state}`;
+            // Redirect to backend's login endpoint which handles GitHub OAuth
+            window.location.href = `${API_BASE_URL}/auth/login`;
 
         } catch (error) {
             this.showError(`OAuth initiation failed: ${error.message}`);
