@@ -1,6 +1,7 @@
 import React, { useState } from "react";
+import Loader from "./Loader";
 
-const IssueForm = ({ onAnalyze }) => {
+const IssueForm = ({ onAnalyze, loading = false }) => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -111,9 +112,10 @@ const IssueForm = ({ onAnalyze }) => {
 
       <button
         type="submit"
-        className="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary-container font-medium py-3 rounded-lg hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-primary/20"
+        disabled={loading}
+        className="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary-container font-medium py-3 rounded-lg hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
       >
-        Analyze Issue
+        {loading ? <Loader inline text="Analyzing..." /> : 'Analyze Issue'}
       </button>
     </form>
   );
