@@ -1,20 +1,19 @@
-"""Issues routes for FastAPI"""
+from typing import List
 from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any, Optional
-import uuid
+from uuid import uuid4
 
-from app.services.priority_service import PriorityService
+from app.models.issue_model import Issue
+from app.schemas.issue_schema import IssueSchema
+from app.utils.issue_storage import IssueStorage
 
 router = APIRouter()
-
-# In-memory storage for demo
-issues_store: Dict[str, Dict[str, Any]] = {}
+issue_storage = IssueStorage()
 
 @router.get("/")
-async def get_issues() -> Dict[str, Any]:
+async def get_issues():
     """Get all issues"""
     try:
-        issues_list = list(issues_store.values())
+        issues_list = issue_storage.get_all_issues()
         return {
             'success': True,
             'count': len(issues_list),
@@ -24,84 +23,109 @@ async def get_issues() -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{issue_id}")
-async def get_issue(issue_id: str) -> Dict[str, Any]:
+async def get_issue(issue_id: str):
     """Get a specific issue"""
-    if issue_id not in issues_store:
-        raise HTTPException(status_code=404, detail="Issue not found")
-    
-    return {
-        'success': True,
-        'issue': issues_store[issue_id]
-    }
-
-@router.post("/")
-async def create_issue(title: str, description: str = "", **kwargs) -> Dict[str, Any]:
-    """Create a new issue"""
     try:
-        issue_id = str(uuid.uuid4())
-        
-        # Determine priority
-        priority = PriorityService.determine_priority(title, description)
-        
-        issue = {
-            'id': issue_id,
-            'title': title,
-            'description': description,
-            'priority': priority,
-            'status': 'open'
-        }
-        
-        issues_store[issue_id] = issue
+        issue = issue_storage.get_issue(issue_id)
+        if not issue:
+            raise HTTPException(status_code=404, detail="Issue not found")
         
         return {
             'success': True,
             'issue': issue
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.put("/{issue_id}")
-async def update_issue(issue_id: str, title: str = None, description: str = None, status: str = None) -> Dict[str, Any]:
-    """Update an issue"""
-    if issue_id not in issues_store:
-        raise HTTPException(status_code=404, detail="Issue not found")
-    
+@router.post("/")
+async def create_issue(issue_data: dict):
+    """Create a new issue"""
     try:
-        if title:
-            issues_store[issue_id]['title'] = title
-        if description:
-            issues_store[issue_id]['description'] = description
-        if status:
-            issues_store[issue_id]['status'] = status
+        # Validate input
+        validated_data = IssueSchema.validate_create(issue_data)
+        
+        # Create issue
+        issue = Issue(
+            id=str(uuid4()),
+            title=validated_data['title'],
+            description=validated_data.get('description', ''),
+            repository=validated_data.get('repository', 'unknown'),
+            priority=validated_data.get('priority', 'medium'),
+            status=validated_data.get('status', 'open'),
+            labels=validated_data.get('labels', [])
+        )
+        
+        # Store issue
+        issue_storage.add_issue(issue.to_dict())
         
         return {
             'success': True,
-            'issue': issues_store[issue_id]
+            'message': 'Issue created successfully',
+            'issue': issue.to_dict()
         }
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'Internal server error: {str(e)}')
+
+@router.put("/{issue_id}")
+async def update_issue(issue_id: str, issue_data: dict):
+    """Update an issue"""
+    try:
+        if not issue_storage.get_issue(issue_id):
+            raise HTTPException(status_code=404, detail="Issue not found")
+        
+        # Update issue
+        success = issue_storage.update_issue(issue_id, issue_data)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update issue")
+        
+        updated_issue = issue_storage.get_issue(issue_id)
+        
+        return {
+            'success': True,
+            'message': 'Issue updated successfully',
+            'issue': updated_issue
+        }
+        
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{issue_id}")
-async def delete_issue(issue_id: str) -> Dict[str, Any]:
+async def delete_issue(issue_id: str):
     """Delete an issue"""
-    if issue_id not in issues_store:
-        raise HTTPException(status_code=404, detail="Issue not found")
-    
     try:
-        del issues_store[issue_id]
+        if not issue_storage.get_issue(issue_id):
+            raise HTTPException(status_code=404, detail="Issue not found")
+        
+        success = issue_storage.delete_issue(issue_id)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete issue")
+        
         return {
             'success': True,
-            'message': 'Issue deleted'
+            'message': 'Issue deleted successfully'
         }
+        
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/priority/{priority}")
-async def get_issues_by_priority(priority: str) -> Dict[str, Any]:
+async def get_issues_by_priority(priority: str):
     """Get issues filtered by priority"""
     try:
+        all_issues = issue_storage.get_all_issues()
         filtered_issues = [
-            issue for issue in issues_store.values()
+            issue for issue in all_issues
             if issue.get('priority') == priority
         ]
         

@@ -1,75 +1,95 @@
-"""Issue storage utility for managing issue data"""
 import json
-import os
-from typing import List, Dict, Any, Optional
-from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 
 class IssueStorage:
-    """Simple storage for issues using JSON files"""
-    
-    def __init__(self, storage_path: str = None):
-        """Initialize issue storage"""
-        if storage_path is None:
-            storage_path = os.path.join(
-                os.path.dirname(__file__), 
-                '../../data/issues.json'
-            )
-        self.storage_path = storage_path
-        self.issues = []
+    """Persistent issue storage backed by a JSON file."""
+
+    def __init__(self, file_path: Optional[Path] = None):
+        backend_root = Path(__file__).resolve().parents[2]
+        self.file_path = file_path or (backend_root / "data" / "issues.json")
+        self.issues: Dict[str, Dict[str, Any]] = {}
         self.load_issues()
-    
+
     def load_issues(self) -> List[Dict[str, Any]]:
-        """Load issues from storage"""
-        try:
-            if os.path.exists(self.storage_path):
-                with open(self.storage_path, 'r', encoding='utf-8') as f:
-                    self.issues = json.load(f)
-            return self.issues
-        except Exception as e:
-            print(f"Error loading issues: {e}")
+        """Load all issues from disk into memory cache."""
+        self.file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if not self.file_path.exists():
+            self.issues = {}
+            self.save_issues()
             return []
-    
-    def save_issues(self) -> bool:
-        """Save issues to storage"""
+
         try:
-            os.makedirs(os.path.dirname(self.storage_path), exist_ok=True)
-            with open(self.storage_path, 'w', encoding='utf-8') as f:
-                json.dump(self.issues, f, indent=2)
-            return True
-        except Exception as e:
-            print(f"Error saving issues: {e}")
-            return False
-    
-    def add_issue(self, issue: Dict[str, Any]) -> bool:
-        """Add a new issue"""
+            raw = self.file_path.read_text(encoding="utf-8").strip()
+            data = json.loads(raw) if raw else []
+        except (OSError, json.JSONDecodeError):
+            self.issues = {}
+            self.save_issues()
+            return []
+
+        if isinstance(data, dict):
+            # Accept both list and dict payloads for backward compatibility.
+            self.issues = {
+                issue_id: issue
+                for issue_id, issue in data.items()
+                if isinstance(issue, dict)
+            }
+        elif isinstance(data, list):
+            self.issues = {
+                issue["id"]: issue
+                for issue in data
+                if isinstance(issue, dict) and issue.get("id")
+            }
+        else:
+            self.issues = {}
+
+        return list(self.issues.values())
+
+    def save_issues(self) -> None:
+        """Persist current issues cache to disk."""
         try:
-            issue['created_at'] = datetime.utcnow().isoformat()
-            self.issues.append(issue)
-            return self.save_issues()
-        except Exception as e:
-            print(f"Error adding issue: {e}")
-            return False
-    
-    def get_all_issues(self) -> List[Dict[str, Any]]:
-        """Get all issues"""
-        return self.issues
-    
-    def get_issue_by_id(self, issue_id: str) -> Optional[Dict[str, Any]]:
-        """Get issue by ID"""
-        for issue in self.issues:
-            if issue.get('id') == issue_id:
-                return issue
-        return None
-    
-    def update_issue(self, issue_id: str, issue_data: Dict[str, Any]) -> bool:
-        """Update an issue"""
-        for i, issue in enumerate(self.issues):
-            if issue.get('id') == issue_id:
-                self.issues[i].update(issue_data)
-                return self.save_issues()
-        return False
-    
+            payload = list(self.issues.values())
+            self.file_path.write_text(
+                json.dumps(payload, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            raise RuntimeError(f"Failed to write issues to disk: {exc}") from exc
+
+    def add_issue(self, issue: Dict[str, Any]) -> Dict[str, Any]:
+        """Add issue to cache and persist it."""
+        issue_id = issue.get("id")
+        if not issue_id:
+            raise ValueError("Issue id is required")
+
+        self.issues[issue_id] = issue
+        self.save_issues()
+        return issue
+
+    def update_issue(self, issue_id: str, issue: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update existing issue in cache and persist it."""
+        if issue_id not in self.issues:
+            return None
+
+        self.issues[issue_id] = issue
+        self.save_issues()
+        return issue
+
     def delete_issue(self, issue_id: str) -> bool:
-        """Delete an issue"""
-        self.issues = [issue for issue in self.issues if issue.get('id') != issue_id]
-        return self.save_issues()
+        """Delete issue from cache and persist changes."""
+        if issue_id not in self.issues:
+            return False
+
+        del self.issues[issue_id]
+        self.save_issues()
+        return True
+
+    def get_issue(self, issue_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieve a single issue from in-memory cache."""
+        return self.issues.get(issue_id)
+
+    def get_all_issues(self) -> List[Dict[str, Any]]:
+        """Return all cached issues."""
+        return list(self.issues.values())

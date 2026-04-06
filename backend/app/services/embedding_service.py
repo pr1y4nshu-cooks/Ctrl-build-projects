@@ -26,6 +26,11 @@ class EmbeddingService:
             print(f"Error generating embedding: {e}")
             return []
     
+    def generate_combined_embedding(self, title: str, description: str = "") -> List[float]:
+        """Generate combined embedding for title and description"""
+        combined_text = f"{title} {description}".strip()
+        return self.generate_embedding(combined_text)
+    
     def generate_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
         """Generate embeddings for multiple texts"""
         if not self.model or not texts:
@@ -69,12 +74,12 @@ class EmbeddingService:
         }
 
 
-# Factory function for backward compatibility
+# Global embedding service instance
 _embedding_service_instance = None
 
-def get_embedding_service() -> EmbeddingService:
-    """Get or create the global embedding service instance"""
+def get_embedding_service(model_name: str = "all-MiniLM-L6-v2") -> EmbeddingService:
+    """Get the global embedding service instance"""
     global _embedding_service_instance
     if _embedding_service_instance is None:
-        _embedding_service_instance = EmbeddingService()
+        _embedding_service_instance = EmbeddingService(model_name)
     return _embedding_service_instance
