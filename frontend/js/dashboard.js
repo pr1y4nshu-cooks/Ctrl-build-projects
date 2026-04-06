@@ -1,6 +1,7 @@
 /**
  * Dashboard - GitHub Repositories
- * Shows login prompt if not authenticated, fetches real repos after OAuth login
+ * Not logged in → shows Sign in with GitHub
+ * Logged in → fetches and renders real GitHub repos
  */
 
 const API_BASE_URL = 'http://localhost:8001';
@@ -26,19 +27,20 @@ class Dashboard {
         document.getElementById('refresh-linked-repos-btn')
             ?.addEventListener('click', () => this.loadRepos());
 
+        // Search filter
+        document.getElementById('repo-search')
+            ?.addEventListener('input', (e) => this.filterRepos(e.target.value));
+
         if (this.sessionId) {
-            // Hide login prompt, show loading
-            document.getElementById('login-prompt')?.classList.add('hidden');
             this.loadRepos();
         }
-        // else: login-prompt is already visible by default in HTML
+        // else: login-prompt is visible by default
     }
 
     async loadRepos() {
         this.showLoading();
 
         try {
-            // Verify session is still valid
             const authRes = await fetch(`${API_BASE_URL}/auth/check?session=${this.sessionId}`);
             const authData = await authRes.json();
 
@@ -49,10 +51,8 @@ class Dashboard {
                 return;
             }
 
-            // Update nav avatar with GitHub profile pic
             this.updateUserUI(authData.user);
 
-            // Fetch real repos from GitHub via backend
             const repoRes = await fetch(`${API_BASE_URL}/auth/repos?session=${this.sessionId}`);
             if (!repoRes.ok) throw new Error('Failed to fetch repositories');
 
@@ -62,7 +62,7 @@ class Dashboard {
             if (this.repos.length === 0) {
                 this.showEmptyState();
             } else {
-                this.renderRepos();
+                this.renderRepos(this.repos);
             }
 
         } catch (err) {
@@ -71,13 +71,35 @@ class Dashboard {
         }
     }
 
-    renderRepos() {
-        document.getElementById('login-prompt')?.classList.add('hidden');
-        document.getElementById('linked-repos-empty')?.classList.add('hidden');
+    filterRepos(query) {
+        if (!this.repos.length) return;
+        const filtered = query.trim()
+            ? this.repos.filter(r => r.name.toLowerCase().includes(query.toLowerCase()) || (r.description || '').toLowerCase().includes(query.toLowerCase()))
+            : this.repos;
+        this.renderRepos(filtered);
+    }
 
-        const grid = document.getElementById('linked-repos-grid');
+    renderRepos(repos) {
+        document.getElementById('login-prompt')?.classList.add('hidden');
+        document.getElementById('repos-empty')?.classList.add('hidden');
+
+        const grid = document.getElementById('main-repos-grid');
+        grid.classList.remove('hidden');
         grid.innerHTML = '';
-        this.repos.forEach(repo => grid.appendChild(this.createRepoCard(repo)));
+
+        repos.forEach(repo => grid.appendChild(this.createRepoCard(repo)));
+
+        // Add "Add Repository" placeholder at end
+        const addCard = document.createElement('div');
+        addCard.className = 'group border-2 border-dashed border-white/5 rounded-lg p-6 flex flex-col items-center justify-center transition-all duration-300 hover:bg-white/5 hover:border-indigo-500/50 cursor-pointer';
+        addCard.innerHTML = `
+            <div class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4 group-hover:bg-indigo-500/10 group-hover:text-indigo-400 transition-all">
+                <span class="material-symbols-outlined">add</span>
+            </div>
+            <span class="font-headline font-bold text-on-surface group-hover:text-indigo-400">Add Repository</span>
+            <p class="text-slate-500 text-xs font-label mt-1">Import from GitHub or GitLab</p>
+        `;
+        grid.appendChild(addCard);
     }
 
     createRepoCard(repo) {
@@ -103,10 +125,9 @@ class Dashboard {
                         ${privacyBadge}
                     </div>
                 </div>
-                <a href="${repo.url}" target="_blank" rel="noopener noreferrer"
-                   class="font-headline font-bold text-xl mb-2 text-white group-hover:text-indigo-400 transition-colors hover:underline block">
+                <h3 class="font-headline font-bold text-xl mb-2 text-white group-hover:text-indigo-400 transition-colors">
                     ${repo.name}
-                </a>
+                </h3>
                 <p class="text-on-surface-variant text-sm font-body line-clamp-2 mb-6">
                     ${repo.description || 'No description provided.'}
                 </p>
@@ -153,8 +174,10 @@ class Dashboard {
 
     showLoading() {
         document.getElementById('login-prompt')?.classList.add('hidden');
-        document.getElementById('linked-repos-empty')?.classList.add('hidden');
-        document.getElementById('linked-repos-grid').innerHTML = `
+        document.getElementById('repos-empty')?.classList.add('hidden');
+        const grid = document.getElementById('main-repos-grid');
+        grid.classList.remove('hidden');
+        grid.innerHTML = `
             <div class="col-span-full text-center py-12">
                 <span class="material-symbols-outlined text-3xl text-on-surface-variant animate-spin">hourglass_top</span>
                 <p class="text-on-surface-variant mt-4 font-body">Loading your repositories...</p>
@@ -162,19 +185,21 @@ class Dashboard {
     }
 
     showLoginPrompt() {
-        document.getElementById('linked-repos-grid').innerHTML = '';
-        document.getElementById('linked-repos-empty')?.classList.add('hidden');
+        document.getElementById('main-repos-grid')?.classList.add('hidden');
+        document.getElementById('repos-empty')?.classList.add('hidden');
         document.getElementById('login-prompt')?.classList.remove('hidden');
     }
 
     showEmptyState() {
-        document.getElementById('linked-repos-grid').innerHTML = '';
+        document.getElementById('main-repos-grid')?.classList.add('hidden');
         document.getElementById('login-prompt')?.classList.add('hidden');
-        document.getElementById('linked-repos-empty')?.classList.remove('hidden');
+        document.getElementById('repos-empty')?.classList.remove('hidden');
     }
 
     showError(msg) {
-        document.getElementById('linked-repos-grid').innerHTML = `
+        const grid = document.getElementById('main-repos-grid');
+        grid.classList.remove('hidden');
+        grid.innerHTML = `
             <div class="col-span-full text-center py-12">
                 <span class="material-symbols-outlined text-3xl text-error">error</span>
                 <p class="text-error mt-4 font-body">${msg}</p>
@@ -187,7 +212,7 @@ class Dashboard {
 
     updateUserUI(user) {
         if (!user) return;
-        const avatar = document.querySelector('nav img[alt="User profile avatar"]');
+        const avatar = document.getElementById('nav-avatar');
         if (avatar && user.avatar_url) avatar.src = user.avatar_url;
     }
 }
