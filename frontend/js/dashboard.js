@@ -1,134 +1,101 @@
 /**
- * Dashboard - Linked Repositories Display
- * Fetches and displays repositories linked via GitHub integration
+ * Dashboard - GitHub Repositories
+ * Fetches real repos after GitHub OAuth login, shows login prompt if not authenticated
  */
 
-const API_BASE_URL = 'http://localhost:8001'; // Backend API URL
+const API_BASE_URL = 'http://localhost:8001';
 
-class DashboardLinkedRepos {
+class Dashboard {
     constructor() {
-        // Get session from URL or localStorage
-        const params = new URLSearchParams(window.location.search);
-        const sessionId = params.get('session');
-        
-        if (sessionId) {
-            localStorage.setItem('session_id', sessionId);
-            // Clean up URL to remove session parameter
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
-        
-        this.sessionId = localStorage.getItem('session_id');
-        this.userId = localStorage.getItem('user_id') || this.generateUserId();
-        this.linkedRepos = [];
+        this.sessionId = null;
+        this.repos = [];
         this.init();
     }
 
     init() {
-        this.setupEventListeners();
-        this.loadLinkedRepositories();
-    }
+        // Check for session in URL (redirected from OAuth callback)
+        const params = new URLSearchParams(window.location.search);
+        const sessionFromUrl = params.get('session');
 
-    setupEventListeners() {
-        document.getElementById('refresh-linked-repos-btn')?.addEventListener('click', () => {
-            this.refreshRepositories();
-        });
-    }
+        if (sessionFromUrl) {
+            localStorage.setItem('session_id', sessionFromUrl);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
 
-    async loadLinkedRepositories() {
-        // Add dummy repositories for testing
-        const dummyRepos = [
-            {
-                id: 'dummy-1',
-                name: 'react-dashboard-app',
-                url: 'https://github.com/example/react-dashboard-app',
-                is_private: false,
-                stars: 245,
-                last_updated: new Date(Date.now() - 3600000 * 5).toISOString() // 5 hours ago
-            },
-            {
-                id: 'dummy-2',
-                name: 'nodejs-api-server',
-                url: 'https://github.com/example/nodejs-api-server',
-                is_private: true,
-                stars: 89,
-                last_updated: new Date(Date.now() - 86400000 * 2).toISOString() // 2 days ago
-            },
-            {
-                id: 'dummy-3',
-                name: 'python-ml-toolkit',
-                url: 'https://github.com/example/python-ml-toolkit',
-                is_private: false,
-                stars: 1523,
-                last_updated: new Date(Date.now() - 3600000 * 12).toISOString() // 12 hours ago
-            },
-            {
-                id: 'dummy-4',
-                name: 'vue-ecommerce-platform',
-                url: 'https://github.com/example/vue-ecommerce-platform',
-                is_private: true,
-                stars: 67,
-                last_updated: new Date(Date.now() - 86400000).toISOString() // 1 day ago
-            }
-        ];
+        this.sessionId = localStorage.getItem('session_id');
 
-        try {
-            const response = await fetch(
-                `${API_BASE_URL}/auth/github/linked-repos?user_id=${this.userId}`,
-                { method: 'GET' }
-            );
+        document.getElementById('refresh-linked-repos-btn')?.addEventListener('click', () => this.loadRepos());
 
-            if (!response.ok) {
-                // User hasn't connected GitHub yet, use dummy repos
-                console.log('Using dummy repositories for testing');
-                this.linkedRepos = dummyRepos;
-                this.renderLinkedRepositories();
-                return;
-            }
-
-            const data = await response.json();
-
-            if (data.count === 0) {
-                // No real repos, use dummy repos
-                console.log('No real repos found, using dummy repositories');
-                this.linkedRepos = dummyRepos;
-                this.renderLinkedRepositories();
-                return;
-            }
-
-            this.linkedRepos = data.repositories;
-            this.renderLinkedRepositories();
-
-        } catch (error) {
-            console.error('Failed to load linked repositories, using dummy data:', error);
-            // On error, show dummy repos instead of empty state
-            this.linkedRepos = dummyRepos;
-            this.renderLinkedRepositories();
+        if (this.sessionId) {
+            this.loadRepos();
+        } else {
+            this.showLoginPrompt();
         }
     }
 
-    renderLinkedRepositories() {
+    async loadRepos() {
+        this.showLoading();
+
+        try {
+            // Verify session is still valid and get user info
+            const authCheck = await fetch(`${API_BASE_URL}/auth/check?session=${this.sessionId}`);
+            const authData = await authCheck.json();
+
+            if (!authData.authenticated) {
+                localStorage.removeItem('session_id');
+                this.showLoginPrompt();
+                return;
+            }
+
+            // Update nav avatar/username
+            this.updateUserUI(authData.user);
+
+            // Fetch real GitHub repos
+            const repoRes = await fetch(`${API_BASE_URL}/auth/repos?session=${this.sessionId}`);
+            if (!repoRes.ok) throw new Error('Failed to fetch repositories');
+
+            const data = await repoRes.json();
+            this.repos = data.repos;
+
+            if (this.repos.length === 0) {
+                this.showEmptyState();
+            } else {
+                this.renderRepos();
+            }
+
+        } catch (err) {
+            console.error(err);
+            this.showError('Failed to load repositories. Please try again.');
+        }
+    }
+
+    renderRepos() {
         const grid = document.getElementById('linked-repos-grid');
         const section = document.getElementById('linked-repos-section');
-        const emptyState = document.getElementById('linked-repos-empty');
+        const empty = document.getElementById('linked-repos-empty');
+        const loginPrompt = document.getElementById('login-prompt');
 
+        loginPrompt?.classList.add('hidden');
+        empty?.classList.add('hidden');
+        section?.classList.remove('hidden');
         grid.innerHTML = '';
-        emptyState.classList.add('hidden');
-        section.classList.remove('hidden');
 
-        this.linkedRepos.forEach(repo => {
-            const card = this.createRepositoryCard(repo);
-            grid.appendChild(card);
+        this.repos.forEach(repo => {
+            grid.appendChild(this.createRepoCard(repo));
         });
     }
 
-    createRepositoryCard(repo) {
+    createRepoCard(repo) {
         const div = document.createElement('div');
         div.className = 'group bg-[#111827] border border-white/10 rounded-lg p-6 flex flex-col justify-between transition-all duration-300 hover:translate-y-[-4px] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:border-indigo-500/30';
-        
-        const lastUpdated = new Date(repo.last_updated).toLocaleDateString();
-        const privacyBadge = repo.is_private 
+
+        const lastUpdated = repo.last_updated ? new Date(repo.last_updated).toLocaleDateString() : '—';
+        const privacyBadge = repo.is_private
             ? '<span class="bg-tertiary/20 text-tertiary text-[10px] font-label font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Private</span>'
             : '<span class="bg-white/5 text-slate-400 text-[10px] font-label px-2 py-0.5 rounded-full uppercase tracking-wider">Public</span>';
+        const langBadge = repo.language
+            ? `<span class="bg-secondary-container/30 text-secondary text-[10px] font-label font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">${repo.language}</span>`
+            : '';
 
         div.innerHTML = `
             <div>
@@ -136,15 +103,17 @@ class DashboardLinkedRepos {
                     <div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
                         <span class="material-symbols-outlined text-indigo-400">folder</span>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 flex-wrap justify-end">
+                        ${langBadge}
                         ${privacyBadge}
                     </div>
                 </div>
-                <a href="${repo.url}" target="_blank" rel="noopener noreferrer" class="font-headline font-bold text-xl mb-2 text-white group-hover:text-indigo-400 transition-colors hover:underline">
+                <a href="${repo.url}" target="_blank" rel="noopener noreferrer"
+                   class="font-headline font-bold text-xl mb-2 text-white group-hover:text-indigo-400 transition-colors hover:underline block">
                     ${repo.name}
                 </a>
                 <p class="text-on-surface-variant text-sm font-body line-clamp-2 mb-6">
-                    Linked repository from GitHub
+                    ${repo.description || 'No description provided.'}
                 </p>
             </div>
             <div class="flex items-center justify-between pt-6 border-t border-white/5">
@@ -156,124 +125,91 @@ class DashboardLinkedRepos {
                     <span>${lastUpdated}</span>
                 </div>
                 <div class="flex gap-2">
-                    <button class="use-repo-btn px-3 py-2 rounded-full bg-green-600/10 text-green-400 font-headline font-bold text-xs hover:bg-green-600 hover:text-white transition-all active:scale-95" data-repo='${JSON.stringify(repo)}'>
+                    <button class="use-repo-btn px-3 py-2 rounded-full bg-green-600/10 text-green-400 font-headline font-bold text-xs hover:bg-green-600 hover:text-white transition-all active:scale-95">
                         USE
                     </button>
-                    <a href="${repo.url}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-full bg-indigo-600/10 text-indigo-400 font-headline font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all active:scale-95">
+                    <a href="${repo.url}" target="_blank" rel="noopener noreferrer"
+                       class="px-4 py-2 rounded-full bg-indigo-600/10 text-indigo-400 font-headline font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all active:scale-95">
                         View
                     </a>
                 </div>
             </div>
         `;
 
-        // Add click handler to USE button
-        const useBtn = div.querySelector('.use-repo-btn');
-        useBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.selectRepository(repo);
-        });
-
+        div.querySelector('.use-repo-btn').addEventListener('click', () => this.selectRepo(repo));
         return div;
     }
 
-    selectRepository(repo) {
-        // Store selected repository in localStorage
-        localStorage.setItem('selected_repo', JSON.stringify(repo));
-        localStorage.setItem('selected_repo_id', repo.id || repo.name);
-        
-        // Show feedback
-        this.showRepoSelected(repo.name);
-        
-        // Navigate to home page after a short delay
+    selectRepo(repo) {
+        localStorage.setItem('selected_repo', JSON.stringify({
+            id: repo.id,
+            name: repo.name,
+            url: repo.url,
+            is_private: repo.is_private,
+            full_name: repo.full_name,
+        }));
+
+        // Toast
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-6 right-6 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50';
+        toast.innerHTML = `<span class="material-symbols-outlined">check_circle</span><span class="font-label font-bold">Using: ${repo.name}</span>`;
+        document.body.appendChild(toast);
+
         setTimeout(() => {
+            toast.remove();
             window.location.href = 'home.html';
         }, 800);
     }
 
-    showRepoSelected(repoName) {
-        // Create a toast notification
-        const toast = document.createElement('div');
-        toast.className = 'fixed bottom-6 right-6 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-pulse z-50';
-        toast.innerHTML = `
-            <span class="material-symbols-outlined">check_circle</span>
-            <span class="font-label font-bold">Repository selected: ${repoName}</span>
-        `;
-        document.body.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.remove();
-        }, 2000);
+    showLoading() {
+        const grid = document.getElementById('linked-repos-grid');
+        const section = document.getElementById('linked-repos-section');
+        document.getElementById('login-prompt')?.classList.add('hidden');
+        document.getElementById('linked-repos-empty')?.classList.add('hidden');
+        section?.classList.remove('hidden');
+        grid.innerHTML = `
+            <div class="col-span-full text-center py-12">
+                <span class="material-symbols-outlined text-3xl text-on-surface-variant animate-spin">hourglass_top</span>
+                <p class="text-on-surface-variant mt-4 font-body">Loading your repositories...</p>
+            </div>`;
+    }
+
+    showLoginPrompt() {
+        document.getElementById('linked-repos-section')?.classList.add('hidden');
+        const prompt = document.getElementById('login-prompt');
+        if (prompt) prompt.classList.remove('hidden');
     }
 
     showEmptyState() {
         const section = document.getElementById('linked-repos-section');
         const grid = document.getElementById('linked-repos-grid');
-        const emptyState = document.getElementById('linked-repos-empty');
-
-        grid.classList.add('hidden');
-        emptyState.classList.remove('hidden');
-        section.classList.remove('hidden');
+        const empty = document.getElementById('linked-repos-empty');
+        section?.classList.remove('hidden');
+        grid.innerHTML = '';
+        empty?.classList.remove('hidden');
     }
 
-    async refreshRepositories() {
-        try {
-            const btn = document.getElementById('refresh-linked-repos-btn');
-            btn.disabled = true;
-            btn.style.opacity = '0.5';
-
-            const response = await fetch(
-                `${API_BASE_URL}/auth/github/refresh-repos?user_id=${this.userId}`,
-                { method: 'POST' }
-            );
-
-            if (!response.ok) {
-                throw new Error('Failed to refresh repositories');
-            }
-
-            // Reload the repositories
-            await this.loadLinkedRepositories();
-
-            // Show success feedback
-            this.showRefreshSuccess();
-
-        } catch (error) {
-            console.error('Failed to refresh repositories:', error);
-            this.showRefreshError(error.message);
-        } finally {
-            const btn = document.getElementById('refresh-linked-repos-btn');
-            btn.disabled = false;
-            btn.style.opacity = '1';
-        }
+    showError(msg) {
+        const grid = document.getElementById('linked-repos-grid');
+        grid.innerHTML = `
+            <div class="col-span-full text-center py-12">
+                <span class="material-symbols-outlined text-3xl text-error">error</span>
+                <p class="text-error mt-4 font-body">${msg}</p>
+                <button onclick="window.dashboard.loadRepos()" class="mt-4 px-6 py-2 rounded-full bg-indigo-600/20 text-indigo-400 font-label text-sm hover:bg-indigo-600 hover:text-white transition-all">
+                    Retry
+                </button>
+            </div>`;
     }
 
-    showRefreshSuccess() {
-        const btn = document.getElementById('refresh-linked-repos-btn');
-        const originalContent = btn.innerHTML;
-        btn.innerHTML = '<span class="material-symbols-outlined text-sm">check</span> Refreshed';
-        
-        setTimeout(() => {
-            btn.innerHTML = originalContent;
-        }, 2000);
-    }
-
-    showRefreshError(message) {
-        const btn = document.getElementById('refresh-linked-repos-btn');
-        const originalContent = btn.innerHTML;
-        btn.innerHTML = '<span class="material-symbols-outlined text-sm">error</span> Error';
-        
-        setTimeout(() => {
-            btn.innerHTML = originalContent;
-        }, 2000);
-    }
-
-    generateUserId() {
-        const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        localStorage.setItem('user_id', userId);
-        return userId;
+    updateUserUI(user) {
+        if (!user) return;
+        const avatar = document.querySelector('nav img[alt="User profile avatar"]');
+        const nameEl = document.getElementById('nav-username');
+        if (avatar && user.avatar_url) avatar.src = user.avatar_url;
+        if (nameEl) nameEl.textContent = user.login || user.name || '';
     }
 }
 
-// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    window.dashboardLinkedRepos = new DashboardLinkedRepos();
+    window.dashboard = new Dashboard();
 });
