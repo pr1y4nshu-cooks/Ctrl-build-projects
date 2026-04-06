@@ -31,7 +31,7 @@ async def github_login():
         f"https://github.com/login/oauth/authorize"
         f"?client_id={GITHUB_CLIENT_ID}"
         f"&redirect_uri={GITHUB_REDIRECT_URI}"
-        f"&scope=read:user,user:email"
+        f"&scope=read:user,user:email,repo"
         f"&state={state}"
     )
     
@@ -122,8 +122,52 @@ async def logout(request: Request):
     
     return {"message": "Logged out successfully"}
 
-@router.get("/check")
-async def check_auth(request: Request):
+@router.get("/repos")
+async def get_user_repos(request: Request):
+    """Fetch GitHub repositories for the authenticated session user"""
+    session_id = request.query_params.get("session")
+
+    if not session_id or session_id not in sessions:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    access_token = sessions[session_id].get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=401, detail="No access token in session")
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            "https://api.github.com/user/repos",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Accept": "application/vnd.github.v3+json"
+            },
+            params={"per_page": 100, "sort": "updated", "visibility": "all"}
+        )
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail="Failed to fetch repos from GitHub")
+
+        repos = response.json()
+
+    return {
+        "repos": [
+            {
+                "id": r["id"],
+                "name": r["name"],
+                "full_name": r["full_name"],
+                "url": r["html_url"],
+                "description": r.get("description") or "",
+                "is_private": r["private"],
+                "language": r.get("language") or "",
+                "stars": r.get("stargazers_count", 0),
+                "forks": r.get("forks_count", 0),
+                "last_updated": r.get("updated_at", ""),
+            }
+            for r in repos
+        ]
+    }
+
+
     """Check if user is authenticated"""
     session_id = request.query_params.get("session")
     
