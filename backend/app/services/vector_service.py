@@ -94,3 +94,46 @@ class VectorService:
             'index_path': self.index_path,
             'is_loaded': self.index is not None
         }
+
+
+def find_similar_issues(query_embedding: np.ndarray, known_issues: List[dict], top_k: int = 5) -> List[dict]:
+    """Find similar issues using cosine similarity"""
+    if not known_issues or len(query_embedding) == 0:
+        return []
+    
+    similarities = []
+    for issue in known_issues:
+        if 'embedding' not in issue or not issue['embedding']:
+            continue
+        
+        try:
+            issue_embedding = np.array(issue['embedding'])
+            # Cosine similarity
+            dot_product = np.dot(query_embedding, issue_embedding)
+            norm1 = np.linalg.norm(query_embedding)
+            norm2 = np.linalg.norm(issue_embedding)
+            
+            if norm1 == 0 or norm2 == 0:
+                continue
+            
+            similarity = dot_product / (norm1 * norm2)
+            similarities.append((issue, float(similarity)))
+        except Exception as e:
+            print(f"Error calculating similarity: {e}")
+            continue
+    
+    # Sort by similarity (descending)
+    similarities.sort(key=lambda x: x[1], reverse=True)
+    
+    # Return top_k results
+    results = []
+    for issue, score in similarities[:top_k]:
+        result = {
+            'id': issue.get('id'),
+            'title': issue.get('title'),
+            'description': issue.get('description'),
+            'similarity_score': score
+        }
+        results.append(result)
+    
+    return results

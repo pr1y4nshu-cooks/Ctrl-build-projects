@@ -67,3 +67,19 @@ class EmbeddingService:
             'model_loaded': self.model is not None,
             'embedding_dimension': self.model.get_sentence_embedding_dimension() if self.model else 0
         }
+    
+    def generate_combined_embedding(self, title: str, description: str) -> List[float]:
+        """Generate a combined embedding from title and description"""
+        combined_text = f"{title} {description}"
+        return self.generate_embedding(combined_text)
+
+
+# Singleton instance
+_embedding_service_instance = None
+
+def get_embedding_service() -> EmbeddingService:
+    """Get or create the singleton embedding service instance"""
+    global _embedding_service_instance
+    if _embedding_service_instance is None:
+        _embedding_service_instance = EmbeddingService()
+    return _embedding_service_instance

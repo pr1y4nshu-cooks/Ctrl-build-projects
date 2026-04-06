@@ -1,59 +1,45 @@
-from flask import Blueprint, request, jsonify
+from fastapi import APIRouter, HTTPException
+from typing import List, Dict
 import uuid
-import os
-from ..models.issue_model import Issue
-from ..schemas.issue_schema import IssueSchema
-from ..utils.file_handler import FileHandler
-from ..services.priority_service import PriorityService
 
-issues_bp = Blueprint('issues', __name__, url_prefix='/api/issues')
+from app.models.issue_model import Issue
+from app.schemas.issue_schema import IssueSchema
+from app.services.priority_service import PriorityService
+
+router = APIRouter()
 
 # In-memory storage for demo
 issues_store = {}
 
-@issues_bp.route('', methods=['GET'])
-def get_issues():
+@router.get("")
+async def get_issues():
     """Get all issues"""
     try:
         issues_list = list(issues_store.values())
-        return jsonify({
+        return {
             'success': True,
             'count': len(issues_list),
             'issues': [IssueSchema.serialize_issue(issue) for issue in issues_list]
-        }), 200
+        }
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
-@issues_bp.route('/<issue_id>', methods=['GET'])
-def get_issue(issue_id):
+@router.get("/{issue_id}")
+async def get_issue(issue_id: str):
     """Get a specific issue"""
-    try:
-        if issue_id not in issues_store:
-            return jsonify({
-                'success': False,
-                'error': 'Issue not found'
-            }), 404
-        
-        issue = issues_store[issue_id]
-        return jsonify({
-            'success': True,
-            'issue': IssueSchema.serialize_issue(issue)
-        }), 200
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+    if issue_id not in issues_store:
+        raise HTTPException(status_code=404, detail='Issue not found')
+    
+    issue = issues_store[issue_id]
+    return {
+        'success': True,
+        'issue': IssueSchema.serialize_issue(issue)
+    }
 
-@issues_bp.route('', methods=['POST'])
-def create_issue():
+@router.post("")
+async def create_issue(data: Dict):
     """Create a new issue"""
     try:
-        data = request.get_json()
-        
         # Validate input
         validated_data = IssueSchema.validate_create(data)
         
@@ -74,100 +60,67 @@ def create_issue():
         # Store issue
         issues_store[issue.id] = issue
         
-        return jsonify({
+        return {
             'success': True,
             'message': 'Issue created successfully',
             'issue': IssueSchema.serialize_issue(issue)
-        }), 201
+        }
         
     except ValueError as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 400
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'Internal server error: {str(e)}'
-        }), 500
+        raise HTTPException(status_code=500, detail=f'Internal server error: {str(e)}')
 
-@issues_bp.route('/<issue_id>', methods=['PUT'])
-def update_issue(issue_id):
+@router.put("/{issue_id}")
+async def update_issue(issue_id: str, data: Dict):
     """Update an issue"""
-    try:
-        if issue_id not in issues_store:
-            return jsonify({
-                'success': False,
-                'error': 'Issue not found'
-            }), 404
-        
-        data = request.get_json()
-        issue = issues_store[issue_id]
-        
-        # Update fields
-        if 'title' in data:
-            issue.title = data['title']
-        if 'description' in data:
-            issue.description = data['description']
-        if 'status' in data:
-            issue.status = data['status']
-        if 'priority' in data:
-            issue.priority = data['priority']
-        if 'labels' in data:
-            issue.labels = data['labels']
-        
-        return jsonify({
-            'success': True,
-            'message': 'Issue updated successfully',
-            'issue': IssueSchema.serialize_issue(issue)
-        }), 200
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+    if issue_id not in issues_store:
+        raise HTTPException(status_code=404, detail='Issue not found')
+    
+    issue = issues_store[issue_id]
+    
+    # Update fields
+    if 'title' in data:
+        issue.title = data['title']
+    if 'description' in data:
+        issue.description = data['description']
+    if 'status' in data:
+        issue.status = data['status']
+    if 'priority' in data:
+        issue.priority = data['priority']
+    if 'labels' in data:
+        issue.labels = data['labels']
+    
+    return {
+        'success': True,
+        'message': 'Issue updated successfully',
+        'issue': IssueSchema.serialize_issue(issue)
+    }
 
-@issues_bp.route('/<issue_id>', methods=['DELETE'])
-def delete_issue(issue_id):
+@router.delete("/{issue_id}")
+async def delete_issue(issue_id: str):
     """Delete an issue"""
-    try:
-        if issue_id not in issues_store:
-            return jsonify({
-                'success': False,
-                'error': 'Issue not found'
-            }), 404
-        
-        del issues_store[issue_id]
-        
-        return jsonify({
-            'success': True,
-            'message': 'Issue deleted successfully'
-        }), 200
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+    if issue_id not in issues_store:
+        raise HTTPException(status_code=404, detail='Issue not found')
+    
+    del issues_store[issue_id]
+    
+    return {
+        'success': True,
+        'message': 'Issue deleted successfully'
+    }
 
-@issues_bp.route('/priority/<priority>', methods=['GET'])
-def get_issues_by_priority(priority):
+@router.get("/priority/{priority}")
+async def get_issues_by_priority(priority: str):
     """Get issues filtered by priority"""
-    try:
-        filtered_issues = [
-            issue for issue in issues_store.values()
-            if issue.priority == priority
-        ]
-        
-        return jsonify({
-            'success': True,
-            'priority': priority,
-            'count': len(filtered_issues),
-            'issues': [IssueSchema.serialize_issue(issue) for issue in filtered_issues]
-        }), 200
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+    filtered_issues = [
+        issue for issue in issues_store.values()
+        if issue.priority == priority
+    ]
+    
+    return {
+        'success': True,
+        'priority': priority,
+        'count': len(filtered_issues),
+        'issues': [IssueSchema.serialize_issue(issue) for issue in filtered_issues]
+    }
