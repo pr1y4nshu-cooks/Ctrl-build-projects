@@ -1,5 +1,5 @@
 // Main Application Entry Point
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'http://localhost:8001'; // Backend API URL on port 8001
 
 // Simple Router
 class Router {
