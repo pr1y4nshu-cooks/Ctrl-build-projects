@@ -2,6 +2,7 @@ import React from "react";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
 import Settings from "./pages/Settings";
+import TriageResultsPage from "./pages/TriageResultsPage";
 
 export default function App() {
   const location = useLocation();
@@ -52,6 +53,7 @@ export default function App() {
         <div className="max-w-6xl mx-auto p-8 lg:p-12">
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/triage" element={<TriageResultsPage />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </div>
