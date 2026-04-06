@@ -65,6 +65,11 @@ class EmbeddingService:
             print(f"Error calculating similarity: {e}")
             return 0.0
     
+    def generate_combined_embedding(self, title: str, description: str) -> List[float]:
+        """Generate embedding from combined title and description"""
+        combined = f"{title}. {description}".strip()
+        return self.generate_embedding(combined)
+
     def get_model_info(self) -> dict:
         """Get information about the embedding model"""
         return {

@@ -1,1 +1,255 @@
-[]
+[
+  {
+    "id": "1de1c5e5-09d6-475f-8444-e8c9fd7b4407",
+    "title": "Login button not working on mobile",
+    "description": "When I tap the login button on iOS Safari, nothing happens. No error shown. Tested on iPhone 14.",
+    "repository": "unknown",
+    "priority": "high",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:06:36.775771",
+    "updated_at": "2026-04-07T01:36:36.775771"
+  },
+  {
+    "id": "6b6a4970-a84a-4726-b243-c2777699ee3c",
+    "title": "Login button not working on mobile",
+    "description": "When I tap the login button on iOS Safari, nothing happens. No error shown. Tested on iPhone 14 with latest iOS.",
+    "repository": "unknown",
+    "priority": "high",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:08:43.808006",
+    "updated_at": "2026-04-07T01:38:43.808006"
+  },
+  {
+    "id": "e19c11d6-3a6d-465c-9ed0-23fd450da058",
+    "title": "Navbar not working",
+    "description": "Not working",
+    "repository": "unknown",
+    "priority": "medium",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:10:09.501459",
+    "updated_at": "2026-04-07T01:40:09.500459"
+  },
+  {
+    "id": "082f5cc5-eeef-4856-ab0b-db4ddb188abb",
+    "title": "Navbar not working",
+    "description": "one button not working \n ",
+    "repository": "unknown",
+    "priority": "medium",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:10:34.842632",
+    "updated_at": "2026-04-07T01:40:34.842632"
+  },
+  {
+    "id": "16cebb74-6649-4c2c-a565-ade7384c327a",
+    "title": "Navbar not working",
+    "description": "one button not working \n ",
+    "repository": "unknown",
+    "priority": "medium",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:10:40.623608",
+    "updated_at": "2026-04-07T01:40:40.623608"
+  },
+  {
+    "id": "970879dd-8cef-4d2f-856e-fe3b5d92cd0d",
+    "title": "test",
+    "description": "test",
+    "repository": "unknown",
+    "priority": "medium",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:11:42.903857",
+    "updated_at": "2026-04-07T01:41:42.903857"
+  },
+  {
+    "id": "1f83e22a-4e1c-4be0-8795-e31c99782106",
+    "title": "Test",
+    "description": "Test desc",
+    "repository": "unknown",
+    "priority": "medium",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:13:51.940373",
+    "updated_at": "2026-04-07T01:43:51.940373"
+  },
+  {
+    "id": "9e82ec05-a481-4fe9-bd5b-a9c42df7ed5b",
+    "title": "Navbar not working",
+    "description": "one component not working",
+    "repository": "unknown",
+    "priority": "medium",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:15:38.438585",
+    "updated_at": "2026-04-07T01:45:38.438585"
+  },
+  {
+    "id": "04854d94-3b0e-4e67-a392-69c91f8648dd",
+    "title": "Navbar not working",
+    "description": "all component not working at all",
+    "repository": "unknown",
+    "priority": "medium",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:15:51.186807",
+    "updated_at": "2026-04-07T01:45:51.186807"
+  },
+  {
+    "id": "b21fb51a-16eb-4381-a1a4-441e85b7d19a",
+    "title": "Login button not working on mobile",
+    "description": "When I tap the login button on iOS Safari, nothing happens. Error in console.",
+    "repository": "unknown",
+    "priority": "high",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:17:39.887606",
+    "updated_at": "2026-04-07T01:47:39.887606"
+  },
+  {
+    "id": "157d2e61-7468-4953-8d8b-11894dc14431",
+    "title": "Add dark mode support",
+    "description": "Please add a dark mode toggle in settings for better night viewing experience.",
+    "repository": "unknown",
+    "priority": "medium",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:17:42.017254",
+    "updated_at": "2026-04-07T01:47:42.017254"
+  },
+  {
+    "id": "575be0d6-8068-4b0a-8221-20f3648379ec",
+    "title": "How to configure OAuth?",
+    "description": "I need help setting up GitHub OAuth. What are the required environment variables?",
+    "repository": "unknown",
+    "priority": "medium",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:17:44.109479",
+    "updated_at": "2026-04-07T01:47:44.109479"
+  },
+  {
+    "id": "91164507-3d2b-4b62-bd06-ac9f37b01859",
+    "title": "navbar not working",
+    "description": "one componnet not wokring\n",
+    "repository": "unknown",
+    "priority": "medium",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:18:36.087361",
+    "updated_at": "2026-04-07T01:48:36.087361"
+  },
+  {
+    "id": "425ff20c-8cb5-4f20-8a73-9e2b8b52dc84",
+    "title": "navbar not working",
+    "description": "no componnet is wokring at all \n\n",
+    "repository": "unknown",
+    "priority": "medium",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:18:49.632187",
+    "updated_at": "2026-04-07T01:48:49.632187"
+  },
+  {
+    "id": "72f46e9e-0c77-4681-bcc7-4032cb5909ec",
+    "title": "Login button broken",
+    "description": "not working at all",
+    "repository": "unknown",
+    "priority": "high",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:19:21.077435",
+    "updated_at": "2026-04-07T01:49:21.077435"
+  },
+  {
+    "id": "31be8137-030e-45af-a352-eeee2e89361d",
+    "title": "nav button broken",
+    "description": "one button not working ",
+    "repository": "unknown",
+    "priority": "high",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:19:35.936701",
+    "updated_at": "2026-04-07T01:49:35.936701"
+  },
+  {
+    "id": "878fe2ca-c8cd-4c1a-83bd-18a04f685411",
+    "title": "nav button broken",
+    "description": "one button slightly working",
+    "repository": "unknown",
+    "priority": "high",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:19:45.776752",
+    "updated_at": "2026-04-07T01:49:45.776752"
+  },
+  {
+    "id": "de5a2e0f-b007-43c0-b5ec-e6c60ae45520",
+    "title": "nav button broken",
+    "description": "one button slightly working",
+    "repository": "unknown",
+    "priority": "high",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:20:18.864372",
+    "updated_at": "2026-04-07T01:50:18.864372"
+  },
+  {
+    "id": "bb8dbf44-59b3-4161-a29e-b008748bb2c0",
+    "title": "Nav Bar not working",
+    "description": "Whole component not wokring\n",
+    "repository": "unknown",
+    "priority": "medium",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:42:54.923808",
+    "updated_at": "2026-04-07T02:12:54.921797"
+  },
+  {
+    "id": "86558101-dbc6-44a3-b53c-aad140c073ce",
+    "title": "Nav Bar not working",
+    "description": "one button is not wokring",
+    "repository": "unknown",
+    "priority": "medium",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:43:14.801561",
+    "updated_at": "2026-04-07T02:13:14.801561"
+  },
+  {
+    "id": "ba53be8f-28dc-44de-846e-2f651178491d",
+    "title": "Nav Bar not working",
+    "description": "one button working",
+    "repository": "unknown",
+    "priority": "medium",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:43:22.727311",
+    "updated_at": "2026-04-07T02:13:22.727311"
+  },
+  {
+    "id": "610d27b7-3c65-44e8-9649-d0fb209ae16e",
+    "title": "Nav Bar button not working",
+    "description": "one button working",
+    "repository": "unknown",
+    "priority": "medium",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:43:30.084358",
+    "updated_at": "2026-04-07T02:13:30.083357"
+  },
+  {
+    "id": "7ac57151-1540-4105-8998-c76813008da7",
+    "title": "Login button not working on mobile",
+    "description": "When I tap the login button on iOS Safari, nothing happens. The app freezes and I see an error in console.",
+    "repository": "unknown",
+    "priority": "high",
+    "status": "open",
+    "labels": [],
+    "created_at": "2026-04-06T20:53:40.052034",
+    "updated_at": "2026-04-07T02:23:40.052034"
+  }
+]

@@ -14,6 +14,24 @@ class IssueIntelligence {
     init() {
         this.loadSelectedRepository();
         this.setupEventListeners();
+        this.clearPlaceholderResults();
+    }
+
+    clearPlaceholderResults() {
+        // Clear hardcoded placeholder values on page load
+        const classificationResult = document.getElementById('classification-result');
+        const priorityResult = document.getElementById('priority-result');
+        const confidenceResult = document.getElementById('confidence-result');
+        const labelsResult = document.getElementById('labels-result');
+        const similarIssues = document.getElementById('similar-issues');
+        const knowledgeObservation = document.getElementById('knowledge-observation');
+
+        if (classificationResult) classificationResult.textContent = 'Awaiting Analysis';
+        if (priorityResult) priorityResult.textContent = 'Not Analyzed';
+        if (confidenceResult) confidenceResult.textContent = '0.0';
+        if (labelsResult) labelsResult.innerHTML = '<span class="text-on-surface-variant text-sm">No labels yet</span>';
+        if (similarIssues) similarIssues.innerHTML = '<div class="text-center py-8 text-on-surface-variant"><p class="font-body">Analyze an issue to find similar ones</p></div>';
+        if (knowledgeObservation) knowledgeObservation.innerHTML = '<p class="text-on-surface-variant">Submit an issue for AI-powered insights and recommendations.</p>';
     }
 
     loadSelectedRepository() {
@@ -102,7 +120,7 @@ class IssueIntelligence {
             }
 
             // Call backend API
-            const response = await fetch(`${API_BASE_URL}/analyze`, {
+            const response = await fetch(`${API_BASE_URL}/analyze/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -129,28 +147,93 @@ class IssueIntelligence {
     }
 
     displayAnalysisResults(result) {
-        // Update Classification
+        console.log('Analysis result:', result); // Debug log
+        
+        // Map classification to icon and color
+        const classificationMap = {
+            'bug': {
+                icon: 'bug_report',
+                color: 'error',
+                bgColor: 'error-container'
+            },
+            'feature': {
+                icon: 'auto_awesome',
+                color: 'primary',
+                bgColor: 'primary-container'
+            },
+            'question': {
+                icon: 'help',
+                color: 'secondary',
+                bgColor: 'secondary-container'
+            }
+        };
+
+        const classification = result.label ? result.label.toLowerCase() : 'bug';
+        const classConfig = classificationMap[classification] || classificationMap['bug'];
+
+        // Update Classification icon and text
         const classificationResult = document.getElementById('classification-result');
-        if (classificationResult && result.classification) {
-            classificationResult.textContent = result.classification;
+        const classificationIcon = document.querySelector('[data-icon="bug_report"]');
+        const classificationIconContainer = classificationIcon?.parentElement;
+        
+        if (classificationResult && result.label) {
+            classificationResult.textContent = result.label.charAt(0).toUpperCase() + result.label.slice(1);
+        }
+        
+        if (classificationIcon) {
+            classificationIcon.setAttribute('data-icon', classConfig.icon);
+            classificationIcon.textContent = classConfig.icon;
+            classificationIcon.className = `material-symbols-outlined text-${classConfig.color} text-3xl`;
+        }
+        
+        if (classificationIconContainer) {
+            classificationIconContainer.className = `p-3 bg-${classConfig.bgColor}/20 rounded-full`;
         }
 
-        // Update Priority
+        // Map priority to color
+        const priorityMap = {
+            'high': { color: 'error', bgColor: 'error-container' },
+            'medium': { color: 'tertiary', bgColor: 'tertiary-container' },
+            'low': { color: 'secondary', bgColor: 'secondary-container' }
+        };
+
+        const priority = result.priority ? result.priority.toLowerCase() : 'medium';
+        const priorityConfig = priorityMap[priority] || priorityMap['medium'];
+
+        // Update Priority with dynamic colors
         const priorityResult = document.getElementById('priority-result');
+        const priorityDot = priorityResult?.previousElementSibling;
+        const priorityContainer = priorityResult?.parentElement;
+        
         if (priorityResult && result.priority) {
-            priorityResult.textContent = result.priority;
+            const priorityText = result.priority.charAt(0).toUpperCase() + result.priority.slice(1) + ' Severity';
+            priorityResult.textContent = priorityText;
+            priorityResult.className = `font-label text-sm text-${priorityConfig.color} font-bold uppercase tracking-wider`;
+        }
+        
+        if (priorityDot) {
+            priorityDot.className = `h-2 w-2 rounded-full bg-${priorityConfig.color}`;
+        }
+        
+        if (priorityContainer) {
+            priorityContainer.className = `inline-flex items-center gap-2 px-4 py-2 bg-${priorityConfig.bgColor}/20 border border-${priorityConfig.color}/20 rounded-full`;
         }
 
-        // Update Confidence
+        // Update Confidence (backend returns object with classification and priority)
         const confidenceResult = document.getElementById('confidence-result');
         if (confidenceResult && result.confidence) {
-            confidenceResult.textContent = result.confidence;
+            const confValue = result.confidence.classification || result.confidence.priority || 0;
+            confidenceResult.textContent = (confValue * 100).toFixed(1);
         }
 
-        // Update Labels
+        // Update Labels - generate from classification
         const labelsResult = document.getElementById('labels-result');
-        if (labelsResult && result.labels && Array.isArray(result.labels)) {
-            labelsResult.innerHTML = result.labels.map(label => 
+        if (labelsResult && result.label) {
+            const labels = [result.label];
+            if (result.priority === 'high') labels.push('urgent');
+            if (this.selectedRepo) labels.push(this.selectedRepo.name.split('-')[0]);
+            
+            labelsResult.innerHTML = labels.map(label => 
                 `<span class="px-4 py-1.5 bg-secondary-container/30 rounded-full text-secondary text-xs font-label font-bold uppercase tracking-wider">${label}</span>`
             ).join('');
         }
@@ -158,20 +241,34 @@ class IssueIntelligence {
         // Update Similar Issues
         const similarIssues = document.getElementById('similar-issues');
         if (similarIssues && result.similar_issues && Array.isArray(result.similar_issues)) {
-            similarIssues.innerHTML = result.similar_issues.map((issue, index) => `
-                <div class="group bg-surface-container-lowest rounded-DEFAULT p-4 flex items-center justify-between hover:bg-surface-variant/40 transition-all cursor-pointer">
-                    <div class="flex items-center gap-4">
-                        <div class="font-label text-primary font-bold">#${issue.id || (index + 1024)}</div>
-                        <h4 class="font-body font-medium text-on-surface group-hover:text-primary transition-colors">${issue.title || 'Similar Issue'}</h4>
+            if (result.similar_issues.length === 0) {
+                similarIssues.innerHTML = `
+                    <div class="text-center py-8 text-on-surface-variant">
+                        <span class="material-symbols-outlined text-4xl mb-2 opacity-50">search_off</span>
+                        <p class="font-body text-sm">No similar issues found yet. This is the first of its kind!</p>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <div class="px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
-                            <span class="font-label text-[10px] text-primary font-bold uppercase">${issue.match_percentage || 94}% Match</span>
+                `;
+            } else {
+                similarIssues.innerHTML = result.similar_issues.map((issue, index) => {
+                    const similarity = issue[1] || issue.similarity || 0;
+                    const matchPercentage = (similarity * 100).toFixed(0);
+                    
+                    return `
+                        <div class="group bg-surface-container-lowest rounded-DEFAULT p-4 flex items-center justify-between hover:bg-surface-variant/40 transition-all cursor-pointer">
+                            <div class="flex items-center gap-4">
+                                <div class="font-label text-primary font-bold">#${issue[0] || issue.id || (index + 1024)}</div>
+                                <h4 class="font-body font-medium text-on-surface group-hover:text-primary transition-colors">${issue.title || 'Similar Issue'}</h4>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+                                    <span class="font-label text-[10px] text-primary font-bold uppercase">${matchPercentage}% Match</span>
+                                </div>
+                                <span class="material-symbols-outlined text-outline-variant" data-icon="chevron_right">chevron_right</span>
+                            </div>
                         </div>
-                        <span class="material-symbols-outlined text-outline-variant" data-icon="chevron_right">chevron_right</span>
-                    </div>
-                </div>
-            `).join('');
+                    `;
+                }).join('');
+            }
 
             // Update duplicates count
             const duplicatesCount = document.getElementById('duplicates-count');
@@ -180,16 +277,16 @@ class IssueIntelligence {
             }
         }
 
-        // Update Knowledge Observation
+        // Update Knowledge Observation (use reason from backend)
         const knowledgeObservation = document.getElementById('knowledge-observation');
-        if (knowledgeObservation && result.observation) {
-            knowledgeObservation.innerHTML = result.observation;
-        }
-
-        // Add repo context to knowledge observation if available
-        if (this.selectedRepo && knowledgeObservation) {
-            const repoContext = `<br><br><strong>Analysis Context:</strong> This analysis was performed using the repository <span class="text-green-400">${this.selectedRepo.name}</span> as context.`;
-            knowledgeObservation.innerHTML += repoContext;
+        if (knowledgeObservation) {
+            const reason = result.reason || 'Analysis complete. Issue has been classified and prioritized.';
+            knowledgeObservation.innerHTML = `<p class="mb-2">${reason}</p>`;
+            
+            // Add repo context if available
+            if (this.selectedRepo) {
+                knowledgeObservation.innerHTML += `<p class="mt-4"><strong>Analysis Context:</strong> This analysis was performed using the repository <span class="text-green-400">${this.selectedRepo.name}</span> as context.</p>`;
+            }
         }
     }
 
