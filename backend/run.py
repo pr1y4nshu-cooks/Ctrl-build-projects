@@ -13,10 +13,10 @@ from app.main import app
 
 if __name__ == '__main__':
     # Get configuration from environment or use defaults
-    port = int(os.getenv('FLASK_PORT', 5000))
-    host = os.getenv('FLASK_HOST', '127.0.0.1')
+    port = int(os.getenv('API_PORT', os.getenv('FLASK_PORT', 8001)))
+    host = os.getenv('API_HOST', os.getenv('FLASK_HOST', '0.0.0.0'))
     
     print(f"Starting OpenIssue Analyzer API on {host}:{port}")
     
-    # Run the app with Uvicorn
-    uvicorn.run(app, host=host, port=port, reload=True)
+    # Run the app with Uvicorn (reload disabled on Windows due to numpy/FAISS crash)
+    uvicorn.run("app.main:app", host=host, port=port, reload=False)
