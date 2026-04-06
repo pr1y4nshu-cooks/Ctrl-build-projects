@@ -1,9 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 from app.db import load_issues
 from app.routes import analyze, health, issues, similar
+
+# Load backend .env so external API keys are available in all run modes.
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

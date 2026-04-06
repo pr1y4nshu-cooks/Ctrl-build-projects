@@ -17,6 +17,7 @@ class IssueInput(BaseModel):
 class AnalysisResponse(BaseModel):
     label: str = Field(..., description="Classification category (e.g., bug, feature, question)")
     priority: str = Field(..., description="Calculated priority (e.g., high, medium, low)")
+    reason: str = Field(..., description="Short explanation for label and priority")
     similar_issues: List[SimilarIssue] = Field(default_factory=list)
     confidence: ConfidenceScores
 

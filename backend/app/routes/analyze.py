@@ -6,9 +6,8 @@ from fastapi import APIRouter, HTTPException
 
 from app.models.issue_model import Issue
 from app.schemas.issue_schema import AnalysisResponse, IssueInput, IssueSchema
-from app.services.classifier_service import classify_issue
+from app.services.classifier_service import triage_issue
 from app.services.embedding_service import get_embedding_service
-from app.services.priority_service import assign_priority
 from app.services.vector_service import find_similar_issues
 from app.utils.issue_storage import IssueStorage
 
@@ -18,8 +17,12 @@ issue_storage = IssueStorage()
 
 @router.post("/", response_model=AnalysisResponse)
 async def analyze_issue(issue: IssueInput):
-    label, classification_confidence = classify_issue(issue.title, issue.description)
-    priority, priority_confidence = assign_priority(label, issue.title, issue.description)
+    triage_result = triage_issue(issue.title, issue.description)
+    label = triage_result["label"]
+    priority = triage_result["priority"]
+    reason = triage_result["reason"]
+    classification_confidence = triage_result["classification_confidence"]
+    priority_confidence = triage_result["priority_confidence"]
 
     embedding = embedding_service.generate_combined_embedding(issue.title, issue.description)
     if embedding is None or len(embedding) == 0:
@@ -44,6 +47,7 @@ async def analyze_issue(issue: IssueInput):
     return {
         "label": label,
         "priority": priority,
+        "reason": reason,
         "similar_issues": similar_issues,
         "confidence": {
             "classification": classification_confidence,
@@ -64,12 +68,14 @@ async def analyze_batch(data: List[Dict[str, Any]]) -> Dict[str, Any]:
     for idx, item in enumerate(data):
         try:
             validated_data = IssueSchema.validate_create(item)
-            label, classification_confidence = classify_issue(
+            triage_result = triage_issue(
                 validated_data["title"], validated_data["description"]
             )
-            priority, priority_confidence = assign_priority(
-                label, validated_data["title"], validated_data["description"]
-            )
+            label = triage_result["label"]
+            priority = triage_result["priority"]
+            reason = triage_result["reason"]
+            classification_confidence = triage_result["classification_confidence"]
+            priority_confidence = triage_result["priority_confidence"]
 
             embedding = embedding_service.generate_combined_embedding(
                 validated_data["title"], validated_data["description"]
@@ -94,6 +100,7 @@ async def analyze_batch(data: List[Dict[str, Any]]) -> Dict[str, Any]:
             known_issues.append(serialized)
 
             serialized["label"] = label
+            serialized["reason"] = reason
             serialized["similar_issues"] = similar_issues
             serialized["confidence"] = {
                 "classification": classification_confidence,
