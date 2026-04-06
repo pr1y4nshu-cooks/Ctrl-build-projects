@@ -26,21 +26,19 @@ class Dashboard {
         document.getElementById('refresh-linked-repos-btn')
             ?.addEventListener('click', () => this.loadRepos());
 
-        // Always show the linked-repos section
-        document.getElementById('linked-repos-section')?.classList.remove('hidden');
-
         if (this.sessionId) {
+            // Hide login prompt, show loading
+            document.getElementById('login-prompt')?.classList.add('hidden');
             this.loadRepos();
-        } else {
-            this.showLoginPrompt();
         }
+        // else: login-prompt is already visible by default in HTML
     }
 
     async loadRepos() {
         this.showLoading();
 
         try {
-            // Verify session
+            // Verify session is still valid
             const authRes = await fetch(`${API_BASE_URL}/auth/check?session=${this.sessionId}`);
             const authData = await authRes.json();
 
@@ -51,10 +49,10 @@ class Dashboard {
                 return;
             }
 
-            // Update nav with GitHub username/avatar
+            // Update nav avatar with GitHub profile pic
             this.updateUserUI(authData.user);
 
-            // Fetch real repos
+            // Fetch real repos from GitHub via backend
             const repoRes = await fetch(`${API_BASE_URL}/auth/repos?session=${this.sessionId}`);
             if (!repoRes.ok) throw new Error('Failed to fetch repositories');
 
@@ -74,14 +72,11 @@ class Dashboard {
     }
 
     renderRepos() {
+        document.getElementById('login-prompt')?.classList.add('hidden');
+        document.getElementById('linked-repos-empty')?.classList.add('hidden');
+
         const grid = document.getElementById('linked-repos-grid');
-        const empty = document.getElementById('linked-repos-empty');
-        const loginPrompt = document.getElementById('login-prompt');
-
-        loginPrompt?.classList.add('hidden');
-        empty?.classList.add('hidden');
         grid.innerHTML = '';
-
         this.repos.forEach(repo => grid.appendChild(this.createRepoCard(repo)));
     }
 
@@ -153,7 +148,6 @@ class Dashboard {
         toast.className = 'fixed bottom-6 right-6 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50';
         toast.innerHTML = `<span class="material-symbols-outlined">check_circle</span><span class="font-label font-bold">Using: ${repo.name}</span>`;
         document.body.appendChild(toast);
-
         setTimeout(() => { toast.remove(); window.location.href = 'home.html'; }, 800);
     }
 
