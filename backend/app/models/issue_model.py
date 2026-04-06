@@ -33,8 +33,17 @@ class Issue:
 	@classmethod
 	def from_dict(cls, data: Dict[str, Any]) -> "Issue":
 		"""Create Issue from dictionary."""
-		created_at = datetime.fromisoformat(data.get("created_at", datetime.now().isoformat()))
-		updated_at = datetime.fromisoformat(data.get("updated_at", datetime.now().isoformat()))
+		try:
+			created_at = datetime.fromisoformat(data.get("created_at", datetime.now().isoformat()))
+		except (ValueError, TypeError):
+			print("Warning: Invalid created_at format, using current time")
+			created_at = datetime.now()
+
+		try:
+			updated_at = datetime.fromisoformat(data.get("updated_at", datetime.now().isoformat()))
+		except (ValueError, TypeError):
+			print("Warning: Invalid updated_at format, using current time")
+			updated_at = datetime.now()
 
 		return cls(
 			id=data.get("id", ""),
