@@ -1,50 +1,84 @@
-from typing import Tuple
+from typing import List
+import re
 
-CRITICAL_KEYWORDS = {"security", "urgent", "critical", "vulnerability", "crash", "outage", "data loss", "emergency"}
-HIGH_KEYWORDS = {"error", "bug", "fail", "broken", "leak", "memory"}
-MEDIUM_KEYWORDS = {"feature", "enhance", "improve", "add", "update"}
-LOW_KEYWORDS = {"typo", "docs", "documentation", "question", "help", "format"}
-
-def assign_priority(label: str, title: str, description: str) -> Tuple[str, float]:
-    """
-    Assign a priority (high, medium, low) to an issue based on its label and content.
-    Returns a tuple of (priority_level, confidence_score).
-    """
-    text = (title + " " + description).lower()
+class PriorityService:
+    """Service for determining issue priority"""
     
-    critical_matches = sum(1 for kw in CRITICAL_KEYWORDS if kw in text)
-    high_matches = sum(1 for kw in HIGH_KEYWORDS if kw in text)
-    medium_matches = sum(1 for kw in MEDIUM_KEYWORDS if kw in text)
-    low_matches = sum(1 for kw in LOW_KEYWORDS if kw in text)
+    # Keywords indicating different priority levels
+    CRITICAL_KEYWORDS = ['crash', 'down', 'broken', 'urgent', 'critical', 'emergency', 'security', 'data loss']
+    HIGH_KEYWORDS = ['bug', 'error', 'fail', 'performance', 'slow', 'regression', 'blocker']
+    MEDIUM_KEYWORDS = ['issue', 'problem', 'feature', 'improve', 'enhancement']
+    LOW_KEYWORDS = ['typo', 'documentation', 'minor', 'trivial', 'nice-to-have']
     
-    total_matches = critical_matches + high_matches + medium_matches + low_matches
-    
-    # Base priority from label
-    base_priority = "medium"
-    if label == "bug":
-        base_priority = "high"
-        high_matches += 1
-        total_matches += 1
-    elif label == "question":
-        base_priority = "low"
-        low_matches += 1
-        total_matches += 1
+    @classmethod
+    def determine_priority(cls, title: str, description: str = "") -> str:
+        """Determine priority based on keywords and patterns"""
+        text = f"{title} {description}".lower()
         
-    if total_matches == 0:
-        return base_priority, 0.5  # Default fallback based on label alone
+        # Check for critical indicators
+        for keyword in cls.CRITICAL_KEYWORDS:
+            if keyword in text:
+                return 'critical'
         
-    scores = {
-        "high": (critical_matches * 2 + high_matches) / (total_matches + critical_matches), # weight critical more
-        "medium": medium_matches / total_matches,
-        "low": low_matches / total_matches
-    }
-    
-    # Get the priority with the highest score
-    best_priority = max(scores, key=scores.get)
-    best_confidence = scores[best_priority]
-    
-    # Boost confidence slightly if keyword priority matches label priority idea
-    if best_priority == base_priority:
-        best_confidence = min(1.0, best_confidence + 0.1)
+        # Check for high priority indicators
+        for keyword in cls.HIGH_KEYWORDS:
+            if keyword in text:
+                return 'high'
         
-    return best_priority, best_confidence
+        # Check for low priority indicators
+        for keyword in cls.LOW_KEYWORDS:
+            if keyword in text:
+                return 'low'
+        
+        # Default to medium
+        return 'medium'
+    
+    @classmethod
+    def get_priority_score(cls, title: str, description: str = "") -> float:
+        """Get numeric priority score (0-1, where 1 is highest priority)"""
+        priority = cls.determine_priority(title, description)
+        
+        priority_map = {
+            'low': 0.25,
+            'medium': 0.50,
+            'high': 0.75,
+            'critical': 1.0
+        }
+        
+        return priority_map.get(priority, 0.5)
+    
+    @classmethod
+    def extract_priority_indicators(cls, text: str) -> List[str]:
+        """Extract priority-related keywords from text"""
+        text_lower = text.lower()
+        indicators = []
+        
+        all_keywords = {
+            'critical': cls.CRITICAL_KEYWORDS,
+            'high': cls.HIGH_KEYWORDS,
+            'medium': cls.MEDIUM_KEYWORDS,
+            'low': cls.LOW_KEYWORDS
+        }
+        
+        for priority, keywords in all_keywords.items():
+            for keyword in keywords:
+                if keyword in text_lower:
+                    indicators.append(f"{keyword}({priority})")
+        
+        return indicators
+    
+    @classmethod
+    def prioritize_issues(cls, issues: List[dict]) -> List[dict]:
+        """Prioritize a list of issues"""
+        for issue in issues:
+            priority = cls.determine_priority(
+                issue.get('title', ''),
+                issue.get('description', '')
+            )
+            issue['priority'] = priority
+        
+        # Sort by priority (critical first)
+        priority_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
+        issues.sort(key=lambda x: priority_order.get(x.get('priority', 'medium'), 2))
+        
+        return issues
