@@ -75,8 +75,6 @@ The frontend collects repo + issue input, the backend fetches GitHub issues and 
 5. Click **Analyze** to view classification (if enabled), priority score, and potential duplicates.
 6. Use results to decide triage action.
 
-> Hackathon note: **GitHub submission is mandatory and a working demo is required** for judging.
-
 ## Local Setup
 
 ### Prerequisites
