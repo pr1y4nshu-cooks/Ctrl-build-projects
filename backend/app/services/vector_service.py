@@ -154,4 +154,7 @@ def find_similar_issues(query_embedding: np.ndarray, issues: List[dict], top_k: 
     
     # Sort by similarity score and return top_k
     similar_results.sort(key=lambda x: x['similarity_score'], reverse=True)
+    # Strip embedding from results to keep response lean
+    for r in similar_results:
+        r.pop('embedding', None)
     return similar_results[:top_k]
